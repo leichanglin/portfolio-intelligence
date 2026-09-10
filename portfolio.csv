@@ -1,14 +1,12 @@
 ticker,name,type,shares,avg_cost,target_price
-IWDA.AS,iShares Core MSCI World UCITS ETF (20%),holding,,,
-CSPX.AS,iShares Core S&P 500 UCITS ETF (20%),holding,,,
-RBOT.MI,iShares Automation & Robotics UCITS ETF (30%),holding,,,
-IAUP.L,iShares Gold Producers UCITS ETF (10%),holding,,,
-ASML.AS,ASML (5%),holding,,,
-TSM,Taiwan Semiconductor Manufacturing (5%),holding,,,
-KO,Coca-Cola (5%),holding,,,
-NDA-DK.CO,Nordea Bank (5%),holding,,,
-NVDA,NVIDIA,watchlist,,,
-TSLA,Tesla,watchlist,,,
-AAPL,Apple,watchlist,,,
-AMZN,Amazon,watchlist,,,
-META,Meta Platforms,watchlist,,,
+AAPL,Apple,holding,20,250.00,
+MSFT,Microsoft,holding,10,400.00,
+NVDA,NVIDIA,holding,30,120.00,
+GOOGL,Alphabet,holding,15,150.00,
+QQQ,Invesco QQQ Trust,holding,8,450.00,
+JPM,JPMorgan Chase,holding,12,220.00,
+TSLA,Tesla,watchlist,,,300.00
+AMZN,Amazon,watchlist,,,220.00
+META,Meta Platforms,watchlist,,,550.00
+AMD,Advanced Micro Devices,watchlist,,,400.00
+PLTR,Palantir Technologies,watchlist,,,120.00
