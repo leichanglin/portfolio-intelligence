@@ -1,7 +1,7 @@
 """Daily portfolio brief with logged, scoreable forecasts.
 
 Reads portfolio.csv, fetches prices/signals/news for each holding and
-watchlist ticker via yfinance, asks Claude for a directional forecast on
+watchlist ticker via yfinance, asks Gemini for a directional forecast on
 each one, prints a formatted brief, and appends the forecasts to
 data/predictions.csv for later scoring by evaluate.py.
 
@@ -10,7 +10,7 @@ Two editions:
   - evening: regular close-of-day view
 
 Credentials come ONLY from environment variables (never hardcoded):
-  ANTHROPIC_API_KEY  - from https://console.anthropic.com/
+  GEMINI_API_KEY  - free tier, from https://aistudio.google.com/apikey
 
 Usage:
   python daily_brief.py                       # edition auto-detected from US Eastern time
@@ -25,10 +25,13 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Literal
 from zoneinfo import ZoneInfo  # stdlib timezone database (Python 3.9+)
 
-import anthropic
 import yfinance as yf
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, Field
 
 PORTFOLIO_FILE = Path(__file__).parent / "portfolio.csv"
 PREDICTIONS_FILE = Path(__file__).parent / "data" / "predictions.csv"
@@ -43,46 +46,22 @@ EASTERN = ZoneInfo("America/New_York")
 MAX_HEADLINES_PER_TICKER = 3
 NEWS_MAX_AGE = timedelta(hours=24)
 
-# Cheap model: this runs 2x/day across every tracked ticker, and the task
-# (a directional call + one-line rationale) doesn't need a bigger model.
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5")
+# Flash tier: free-tier eligible on Google AI Studio, and this task (a
+# directional call + one-line rationale) doesn't need a bigger model.
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
-FORECAST_TOOL = {
-    "name": "record_forecast",
-    "description": "Record a directional forecast for one ticker at two horizons.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "horizon_1d": {
-                "type": "object",
-                "properties": {
-                    "direction": {"type": "string", "enum": ["up", "down", "flat"]},
-                    "confidence": {"type": "number", "minimum": 0.5, "maximum": 1.0},
-                    "rationale": {"type": "string", "description": "One sentence."},
-                },
-                "required": ["direction", "confidence", "rationale"],
-            },
-            "horizon_5d": {
-                "type": "object",
-                "properties": {
-                    "direction": {"type": "string", "enum": ["up", "down", "flat"]},
-                    "confidence": {"type": "number", "minimum": 0.5, "maximum": 1.0},
-                    "rationale": {"type": "string", "description": "One sentence."},
-                },
-                "required": ["direction", "confidence", "rationale"],
-            },
-            "arguments_for": {
-                "type": "array", "items": {"type": "string"},
-                "description": "1-3 short bullet arguments in favor of the position.",
-            },
-            "arguments_against": {
-                "type": "array", "items": {"type": "string"},
-                "description": "1-3 short bullet arguments against the position.",
-            },
-        },
-        "required": ["horizon_1d", "horizon_5d", "arguments_for", "arguments_against"],
-    },
-}
+
+class HorizonForecast(BaseModel):
+    direction: Literal["up", "down", "flat"]
+    confidence: float = Field(ge=0.5, le=1.0)
+    rationale: str
+
+
+class ForecastResponse(BaseModel):
+    horizon_1d: HorizonForecast
+    horizon_5d: HorizonForecast
+    arguments_for: list[str]
+    arguments_against: list[str]
 
 
 def load_portfolio():
@@ -257,8 +236,8 @@ def build_key_inputs(data, edition):
 
 
 def call_llm_forecast(client, name, data, edition):
-    """Ask Claude for a structured forecast. Returns the tool-call input dict,
-    or raises on failure (caller decides how to handle it)."""
+    """Ask Gemini for a structured forecast. Returns a plain dict shaped like
+    ForecastResponse, or raises on failure (caller decides how to handle it)."""
     headlines_text = "\n".join(f"- {title}" for title, _ in data["news"]) or "(none in the last 24h)"
     signals = data["signals"]
     prompt = f"""You are analyzing {name} ({data['ticker']}) for a {edition} portfolio brief.
@@ -278,17 +257,17 @@ for both a 1-day and a 5-day horizon, each with a confidence between 0.5 and
 against the position, grounded only in the data above. Do not use any
 information beyond what's given here."""
 
-    response = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=1024,
-        tools=[FORECAST_TOOL],
-        tool_choice={"type": "tool", "name": "record_forecast"},
-        messages=[{"role": "user", "content": prompt}],
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=ForecastResponse,
+        ),
     )
-    for block in response.content:
-        if block.type == "tool_use" and block.name == "record_forecast":
-            return block.input
-    raise RuntimeError("model did not return a record_forecast tool call")
+    if response.parsed is None:
+        raise RuntimeError(f"model did not return valid structured output: {response.text!r}")
+    return response.parsed.model_dump()
 
 
 def make_forecast_rows(ticker, forecast, price, made_at_utc, key_inputs_json):
@@ -443,10 +422,10 @@ def main():
     args = parser.parse_args()
     edition = args.edition or detect_edition()
 
-    if "ANTHROPIC_API_KEY" not in os.environ:
-        sys.exit("error: ANTHROPIC_API_KEY must be set")
+    if "GEMINI_API_KEY" not in os.environ:
+        sys.exit("error: GEMINI_API_KEY must be set")
 
-    client = anthropic.Anthropic()
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     made_at_utc = datetime.now(timezone.utc)
 
     holdings, watchlist = load_portfolio()
