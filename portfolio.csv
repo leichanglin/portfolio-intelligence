@@ -1,6 +1,14 @@
 ticker,name,type,shares,avg_cost,target_price
-AAPL,Apple,holding,10,150.00,
-MSFT,Microsoft,holding,8,300.00,
-GOOGL,Alphabet,holding,15,120.00,
-AMZN,Amazon,watchlist,,,180.00
-TSLA,Tesla,watchlist,,,200.00
+IWDA.AS,iShares Core MSCI World UCITS ETF (20%),holding,,,
+CSPX.AS,iShares Core S&P 500 UCITS ETF (20%),holding,,,
+RBOT.MI,iShares Automation & Robotics UCITS ETF (30%),holding,,,
+IAUP.L,iShares Gold Producers UCITS ETF (10%),holding,,,
+ASML.AS,ASML (5%),holding,,,
+TSM,Taiwan Semiconductor Manufacturing (5%),holding,,,
+KO,Coca-Cola (5%),holding,,,
+NDA-DK.CO,Nordea Bank (5%),holding,,,
+NVDA,NVIDIA,watchlist,,,
+TSLA,Tesla,watchlist,,,
+AAPL,Apple,watchlist,,,
+AMZN,Amazon,watchlist,,,
+META,Meta Platforms,watchlist,,,
