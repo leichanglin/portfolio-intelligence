@@ -1,0 +1,6 @@
+ticker,name,type,shares,avg_cost,target_price
+AAPL,Apple,holding,10,150.00,
+MSFT,Microsoft,holding,8,300.00,
+GOOGL,Alphabet,holding,15,120.00,
+AMZN,Amazon,watchlist,,,180.00
+TSLA,Tesla,watchlist,,,200.00
